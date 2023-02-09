@@ -1,0 +1,195 @@
+# Meta-Programming
+
+## The Language of Macros
+
+```elixir
+quote do: 1 + 2
+```
+
+```elixir
+quote do: div(10, 2)
+```
+
+```elixir
+defmodule Math do
+  defmacro say({:+, _, [lhs, rhs]}) do
+    quote do
+      lhs = unquote(lhs)
+      rhs = unquote(rhs)
+      result = lhs + rhs
+      IO.puts("#{lhs} plus #{rhs} is #{result}")
+      result
+    end
+  end
+
+  defmacro say({:*, _, [lhs, rhs]}) do
+    quote do
+      lhs = unquote(lhs)
+      rhs = unquote(rhs)
+      result = lhs * rhs
+      IO.puts("#{lhs} times #{rhs} is #{result}")
+      result
+    end
+  end
+end
+```
+
+```elixir
+require Math
+Math.say(5 + 2)
+Math.say(18 * 4)
+```
+
+```elixir
+defmodule ControlFlow do
+  defmacro unless(expression, do: block) do
+    quote do
+      if !unquote(expression), do: unquote(block)
+    end
+  end
+end
+```
+
+```elixir
+require ControlFlow
+ControlFlow.unless(2 == 5, do: "block entered")
+```
+
+```elixir
+require ControlFlow
+
+ControlFlow.unless 5 == 5 do
+  "block entered"
+end
+```
+
+```elixir
+quote do
+  a = unquote(10)
+  IO.inspect(a)
+end
+```
+
+```elixir
+number = 5
+
+ast =
+  quote do
+    number * 10
+  end
+
+Code.eval_quoted(ast)
+```
+
+```elixir
+number = 5
+
+ast =
+  quote do
+    unquote(number) * 10
+  end
+
+Code.eval_quoted(ast)
+```
+
+```elixir
+require ControlFlow
+
+ast =
+  quote do
+    ControlFlow.unless(2 == 5, do: "block entered")
+  end
+
+expanded_once = Macro.expand_once(ast, __ENV__)
+IO.inspect(expanded_once)
+expanded_fully = Macro.expand_once(expanded_once, __ENV__)
+```
+
+```elixir
+defmodule Mod do
+  defmacro definfo do
+    IO.puts("In macro's context (#{__MODULE__}).")
+
+    quote do
+      IO.puts("In caller's context (#{__MODULE__}).")
+
+      def friendly_info do
+        IO.puts("""
+        My name is #{__MODULE__}
+        My functions are #{inspect(__MODULE__.__info__(:functions))}
+        """)
+      end
+    end
+  end
+end
+```
+
+```elixir
+defmodule MyModule do
+  require Mod
+  Mod.definfo()
+end
+
+MyModule.friendly_info()
+```
+
+```elixir
+ast =
+  quote do
+    if meaning_to_life == 42 do
+      "it's true"
+    else
+      "it remains to be seen"
+    end
+  end
+
+Code.eval_quoted(ast, meaning_to_life: 42)
+```
+
+```elixir
+ast =
+  quote do
+    if var!(meaning_to_life) == 42 do
+      "it's true"
+    else
+      "it remains to be seen"
+    end
+  end
+
+IO.inspect(Code.eval_quoted(ast, meaning_to_life: 42))
+Code.eval_quoted(ast, meaning_to_life: 100)
+```
+
+```elixir
+defmodule Setter do
+  defmacro bind_name(string) do
+    quote do
+      name = unquote(string)
+    end
+  end
+end
+```
+
+```elixir
+require Setter
+name = "Chris"
+Setter.bind_name("Max")
+name
+```
+
+```elixir
+defmodule Setter2 do
+  defmacro bind_name(string) do
+    quote do
+      var!(name) = unquote(string)
+    end
+  end
+end
+```
+
+```elixir
+require Setter2
+name = "Chris"
+Setter2.bind_name("Max")
+name
+```
